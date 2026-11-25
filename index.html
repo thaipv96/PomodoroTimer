@@ -1,0 +1,3076 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="amoled" data-mode="focus">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" id="meta-theme-color" />
+  <meta name="description" content="Pomodrone — Zero-dependency, offline-first precision Pomodoro & Flowtime timer with Web Audio synthesis, task tracking, and productivity analytics." />
+  <title>25:00 — Pomodrone</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/svg+xml" id="dynamic-favicon" href="./icons/icon.svg" />
+  <style>
+    /* ==========================================================================
+       1. DESIGN TOKENS & THEME SYSTEM (Material Design 3 + AMOLED Pure Black)
+       ========================================================================== */
+    :root {
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+      --radius-xs: 8px;
+      --radius-sm: 12px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-pill: 9999px;
+
+      --transition-fast: 150ms cubic-bezier(0.2, 0, 0, 1);
+      --transition-med: 260ms cubic-bezier(0.2, 0, 0, 1);
+
+      /* Default Phase Accent (Focus) */
+      --accent: #F28B82;
+      --accent-strong: #EA4335;
+      --accent-on: #1F0706;
+      --accent-soft: rgba(234, 67, 53, 0.14);
+      --accent-border: rgba(242, 139, 130, 0.34);
+    }
+
+    /* AMOLED Pure Black Theme */
+    html[data-theme="amoled"] {
+      --bg-page: #000000;
+      --bg-surface: #0A0A0C;
+      --bg-surface-2: #141417;
+      --bg-surface-3: #1E1E23;
+      --bg-hover: #25252B;
+      --border-subtle: #222227;
+      --border-strong: #34343C;
+      --text-primary: #F5F5F7;
+      --text-secondary: #A1A1AA;
+      --text-muted: #71717A;
+      --ring-track: #1C1C21;
+      --shadow-card: 0 0 0 1px var(--border-subtle);
+      --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.92), 0 0 0 1px var(--border-strong);
+      --heat-0: #141417;
+      --heat-1: rgba(234, 67, 53, 0.25);
+      --heat-2: rgba(234, 67, 53, 0.48);
+      --heat-3: rgba(234, 67, 53, 0.74);
+      --heat-4: #F28B82;
+    }
+
+    /* Material Dark Theme */
+    html[data-theme="dark"] {
+      --bg-page: #121214;
+      --bg-surface: #1B1B1F;
+      --bg-surface-2: #242429;
+      --bg-surface-3: #2E2E35;
+      --bg-hover: #36363E;
+      --border-subtle: #2F2F37;
+      --border-strong: #43434E;
+      --text-primary: #F4F4F6;
+      --text-secondary: #A6A6B0;
+      --text-muted: #787882;
+      --ring-track: #2B2B32;
+      --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.28), 0 0 0 1px var(--border-subtle);
+      --shadow-modal: 0 24px 56px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--border-strong);
+      --heat-0: #242429;
+      --heat-1: rgba(234, 67, 53, 0.26);
+      --heat-2: rgba(234, 67, 53, 0.50);
+      --heat-3: rgba(234, 67, 53, 0.75);
+      --heat-4: #F28B82;
+    }
+
+    /* Material Light Theme */
+    html[data-theme="light"] {
+      --bg-page: #F6F8FA;
+      --bg-surface: #FFFFFF;
+      --bg-surface-2: #F1F3F5;
+      --bg-surface-3: #E6E9ED;
+      --bg-hover: #DCE0E5;
+      --border-subtle: #E1E4E8;
+      --border-strong: #C8CDD3;
+      --text-primary: #18191B;
+      --text-secondary: #585D64;
+      --text-muted: #80868F;
+      --ring-track: #E8EAED;
+      --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.05), 0 0 0 1px var(--border-subtle);
+      --shadow-modal: 0 20px 48px rgba(16, 24, 40, 0.18), 0 0 0 1px var(--border-subtle);
+      --heat-0: #EEF0F3;
+      --heat-1: rgba(217, 48, 37, 0.22);
+      --heat-2: rgba(217, 48, 37, 0.45);
+      --heat-3: rgba(217, 48, 37, 0.72);
+      --heat-4: #D93025;
+    }
+
+    /* Dynamic Phase Accents */
+    html[data-mode="focus"] {
+      --accent: #F28B82;
+      --accent-strong: #EA4335;
+      --accent-on: #FFFFFF;
+      --accent-soft: rgba(234, 67, 53, 0.14);
+      --accent-border: rgba(242, 139, 130, 0.36);
+    }
+    html[data-theme="light"][data-mode="focus"] {
+      --accent: #D93025;
+      --accent-strong: #C5221F;
+      --accent-on: #FFFFFF;
+      --accent-soft: rgba(217, 48, 37, 0.10);
+      --accent-border: rgba(217, 48, 37, 0.30);
+    }
+
+    html[data-mode="shortBreak"] {
+      --accent: #81C995;
+      --accent-strong: #34A853;
+      --accent-on: #05220E;
+      --accent-soft: rgba(52, 168, 83, 0.15);
+      --accent-border: rgba(129, 201, 149, 0.36);
+    }
+    html[data-theme="light"][data-mode="shortBreak"] {
+      --accent: #1E8E3E;
+      --accent-strong: #137333;
+      --accent-on: #FFFFFF;
+      --accent-soft: rgba(30, 142, 62, 0.10);
+      --accent-border: rgba(30, 142, 62, 0.30);
+    }
+
+    html[data-mode="longBreak"] {
+      --accent: #8AB4F8;
+      --accent-strong: #4285F4;
+      --accent-on: #061B3A;
+      --accent-soft: rgba(66, 133, 244, 0.15);
+      --accent-border: rgba(138, 180, 248, 0.36);
+    }
+    html[data-theme="light"][data-mode="longBreak"] {
+      --accent: #1A73E8;
+      --accent-strong: #1967D2;
+      --accent-on: #FFFFFF;
+      --accent-soft: rgba(26, 115, 232, 0.10);
+      --accent-border: rgba(26, 115, 232, 0.30);
+    }
+
+    html[data-mode="flowtime"] {
+      --accent: #FDD663;
+      --accent-strong: #F9AB00;
+      --accent-on: #261900;
+      --accent-soft: rgba(249, 171, 0, 0.16);
+      --accent-border: rgba(253, 214, 99, 0.40);
+    }
+    html[data-theme="light"][data-mode="flowtime"] {
+      --accent: #E37400;
+      --accent-strong: #B06000;
+      --accent-on: #FFFFFF;
+      --accent-soft: rgba(227, 116, 0, 0.11);
+      --accent-border: rgba(227, 116, 0, 0.32);
+    }
+
+    /* ==========================================================================
+       2. RESET & BASE TYPOGRAPHY
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      min-height: 100%;
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background-color var(--transition-med), color var(--transition-med);
+    }
+
+    button, input, select {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: none;
+      outline: none;
+    }
+
+    button {
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .tabular {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
+    /* ==========================================================================
+       3. APP SHELL & TOP HEADER (Zero Layout Shift)
+       ========================================================================== */
+    .app-shell {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 16px 20px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 48px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      transition: background var(--transition-med), border-color var(--transition-med);
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .offline-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 26px;
+      padding: 0 10px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 500;
+      white-space: nowrap;
+      width: 142px;
+      justify-content: center;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #34A853;
+      flex-shrink: 0;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-surface-2);
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+    }
+
+    .icon-btn.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: var(--accent-border);
+    }
+
+    /* Theme 3-way Segmented Pill */
+    .theme-group {
+      display: grid;
+      grid-template-columns: repeat(3, 36px);
+      height: 40px;
+      padding: 3px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .theme-opt {
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--text-muted);
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+
+    .theme-opt:hover {
+      color: var(--text-primary);
+    }
+
+    .theme-opt.active {
+      background: var(--bg-surface-3);
+      color: var(--text-primary);
+    }
+
+    /* Fixed-width Language Switcher (Zero Layout Shift) */
+    .lang-group {
+      display: grid;
+      grid-template-columns: repeat(2, 38px);
+      height: 40px;
+      padding: 3px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .lang-opt {
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--text-muted);
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+
+    .lang-opt.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    /* ==========================================================================
+       4. AMBIENT NOISE QUICK BAR (Collapsible)
+       ========================================================================== */
+    .ambient-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      box-shadow: var(--shadow-card);
+    }
+
+    .ambient-bar.open {
+      display: flex;
+    }
+
+    .ambient-pills {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip-btn {
+      height: 32px;
+      padding: 0 12px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+      font-weight: 500;
+      min-width: 78px;
+      text-align: center;
+      white-space: nowrap;
+      transition: all var(--transition-fast);
+    }
+
+    .chip-btn:hover {
+      background: var(--bg-surface-3);
+      color: var(--text-primary);
+    }
+
+    .chip-btn.active {
+      background: var(--accent-soft);
+      border-color: var(--accent-border);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 190px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 120px;
+      height: 5px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-surface-3);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg-surface);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    /* ==========================================================================
+       5. MAIN WORKSPACE GRID & ZEN FULLSCREEN MODE
+       ========================================================================== */
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+      .offline-pill {
+        display: none;
+      }
+    }
+
+    /* Zen Mode hides side panels & distractions */
+    body.zen-mode .side-column,
+    body.zen-mode .ambient-bar,
+    body.zen-mode .preset-row,
+    body.zen-mode .shortcut-bar {
+      display: none !important;
+    }
+
+    body.zen-mode .workspace {
+      grid-template-columns: minmax(0, 560px);
+      justify-content: center;
+      min-height: calc(100vh - 110px);
+      align-items: center;
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      padding: 24px;
+      transition: background-color var(--transition-med), box-shadow var(--transition-med);
+    }
+
+    /* ==========================================================================
+       6. TIMER CARD & PRECISION SVG RING
+       ========================================================================== */
+    .timer-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    /* Fixed 3-Column Mode Segmented Control (Zero Layout Shift) */
+    .mode-tabs {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 4px;
+      padding: 4px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .mode-tab {
+      height: 38px;
+      padding: 0 8px;
+      border-radius: 11px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+
+    .mode-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .mode-tab.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      box-shadow: inset 0 0 0 1px var(--accent-border);
+    }
+
+    /* Quick Duration Presets */
+    .preset-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .preset-pill {
+      height: 28px;
+      padding: 0 12px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      font-weight: 600;
+      transition: all var(--transition-fast);
+    }
+
+    .preset-pill:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .preset-pill.active {
+      border-color: var(--accent-border);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    /* SVG Circular Gauge */
+    .ring-wrapper {
+      position: relative;
+      width: 286px;
+      height: 286px;
+      display: grid;
+      place-items: center;
+      margin: 4px 0;
+    }
+
+    .ring-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .ring-track {
+      fill: none;
+      stroke: var(--ring-track);
+      stroke-width: 10;
+    }
+
+    .ring-progress {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 10;
+      stroke-linecap: round;
+      transition: stroke var(--transition-med);
+    }
+
+    .ring-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 24px;
+      gap: 6px;
+      max-width: 244px;
+    }
+
+    .phase-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 24px;
+      padding: 0 10px;
+      border-radius: var(--radius-pill);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .timer-digits {
+      font-size: 4.1rem;
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+    }
+
+    .active-task-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 210px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .active-task-pill span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Session Round Dots */
+    .cycle-dots {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 14px;
+    }
+
+    .cycle-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--bg-surface-3);
+      border: 1px solid var(--border-strong);
+      transition: all var(--transition-med);
+    }
+
+    .cycle-dot.done {
+      background: var(--accent);
+      border-color: var(--accent);
+      transform: scale(1.08);
+    }
+
+    /* Primary Controls Row (Fixed Dimensions for Zero Layout Shift) */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      width: 100%;
+    }
+
+    .ctrl-secondary {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      display: grid;
+      place-items: center;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .ctrl-secondary:hover {
+      background: var(--bg-surface-3);
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+    }
+
+    .ctrl-primary {
+      min-width: 174px;
+      height: 52px;
+      padding: 0 24px;
+      border-radius: var(--radius-md);
+      background: var(--accent-strong);
+      color: #FFFFFF;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 6px 20px var(--accent-soft);
+      transition: transform var(--transition-fast), filter var(--transition-fast), background var(--transition-med);
+      white-space: nowrap;
+    }
+
+    .ctrl-primary:hover {
+      filter: brightness(1.06);
+    }
+
+    .ctrl-primary:active {
+      transform: scale(0.98);
+    }
+
+    .shortcut-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-subtle);
+      width: 100%;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 5px;
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-strong);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      margin-right: 4px;
+    }
+
+    /* ==========================================================================
+       7. RIGHT COLUMN: INTEGRATED TASK DRAWER & ANALYTICS
+       ========================================================================== */
+    .side-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .text-btn {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      padding: 4px 8px;
+      border-radius: var(--radius-xs);
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+
+    .text-btn:hover {
+      background: var(--bg-surface-2);
+      color: var(--text-primary);
+    }
+
+    /* Task Input Form */
+    .task-form {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .task-input {
+      flex: 1;
+      min-width: 0;
+      height: 42px;
+      padding: 0 14px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.9rem;
+      transition: border-color var(--transition-fast);
+    }
+
+    .task-input:focus {
+      border-color: var(--accent);
+    }
+
+    .est-stepper {
+      display: inline-flex;
+      align-items: center;
+      height: 42px;
+      padding: 0 6px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .est-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      color: var(--text-secondary);
+      font-weight: 700;
+    }
+
+    .est-btn:hover {
+      background: var(--bg-surface-3);
+      color: var(--text-primary);
+    }
+
+    .est-val {
+      min-width: 22px;
+      text-align: center;
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .add-task-btn {
+      height: 42px;
+      padding: 0 14px;
+      border-radius: var(--radius-sm);
+      background: var(--accent-strong);
+      color: #FFFFFF;
+      font-weight: 600;
+      font-size: 0.86rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .add-task-btn:hover {
+      filter: brightness(1.07);
+    }
+
+    /* Task List */
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 270px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: border-color var(--transition-fast), background var(--transition-fast);
+    }
+
+    .task-item:hover {
+      border-color: var(--border-strong);
+    }
+
+    .task-item.selected {
+      background: var(--accent-soft);
+      border-color: var(--accent-border);
+    }
+
+    .task-check {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 2px solid var(--border-strong);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      transition: all var(--transition-fast);
+    }
+
+    .task-item.completed .task-check {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+      color: #FFFFFF;
+    }
+
+    .task-title {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.9rem;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .task-item.completed .task-title {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .task-count {
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-surface-3);
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .task-del {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .task-del:hover {
+      background: rgba(234, 67, 53, 0.16);
+      color: #F28B82;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 22px 12px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      border: 1px dashed var(--border-subtle);
+      border-radius: var(--radius-sm);
+    }
+
+    /* ==========================================================================
+       8. ANALYTICS PANEL (KPIs, 7-Day Bar Chart, 24h Heatmap, Export/Import)
+       ========================================================================== */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .kpi-box {
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .kpi-label {
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .kpi-val {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .kpi-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .section-subhead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    /* 7-Day Bar Chart */
+    .bar-chart {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+      height: 108px;
+      align-items: end;
+      padding: 8px 6px 4px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 16px;
+    }
+
+    .bar-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: flex-end;
+      gap: 5px;
+    }
+
+    .bar-track {
+      width: 100%;
+      max-width: 24px;
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
+      border-radius: 6px;
+      background: var(--bg-surface-3);
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      width: 100%;
+      background: var(--accent);
+      border-radius: 6px 6px 0 0;
+      min-height: 3px;
+      transition: height 320ms cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    .bar-day {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .bar-col.today .bar-day {
+      color: var(--accent);
+    }
+
+    /* 24-Hour Heatmap (4x6 grid) */
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+
+    .heat-cell {
+      aspect-ratio: 1.35;
+      border-radius: 4px;
+      background: var(--heat-0);
+      border: 1px solid var(--border-subtle);
+      display: grid;
+      place-items: center;
+      font-size: 0.62rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+
+    .heat-cell[data-level="1"] { background: var(--heat-1); color: var(--text-primary); }
+    .heat-cell[data-level="2"] { background: var(--heat-2); color: var(--text-primary); }
+    .heat-cell[data-level="3"] { background: var(--heat-3); color: #FFFFFF; }
+    .heat-cell[data-level="4"] { background: var(--heat-4); color: #111111; font-weight: 700; }
+
+    .data-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .outline-btn {
+      height: 32px;
+      padding: 0 11px;
+      border-radius: var(--radius-xs);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .outline-btn:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    /* ==========================================================================
+       9. SETTINGS MODAL & TOAST NOTIFICATIONS
+       ========================================================================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(4px);
+      display: none;
+      place-items: center;
+      padding: 16px;
+      z-index: 100;
+    }
+
+    .modal-backdrop.open {
+      display: grid;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 520px;
+      max-height: 88vh;
+      overflow-y: auto;
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-modal);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 12px;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .settings-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .settings-group-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+    }
+
+    .duration-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .field-box {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field-label {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    .num-input, .select-input {
+      height: 38px;
+      padding: 0 10px;
+      border-radius: var(--radius-xs);
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.9rem;
+      width: 100%;
+    }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-2);
+    }
+
+    .switch-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .switch-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .switch-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-surface-3);
+      border: 1px solid var(--border-strong);
+      flex-shrink: 0;
+      transition: background var(--transition-fast);
+    }
+
+    .toggle-switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--text-secondary);
+      transition: transform var(--transition-fast), background var(--transition-fast);
+    }
+
+    .toggle-switch[aria-checked="true"] {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+
+    .toggle-switch[aria-checked="true"]::after {
+      transform: translateX(20px);
+      background: #FFFFFF;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* Toast Banner */
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%) translateY(90px);
+      padding: 10px 18px;
+      border-radius: var(--radius-pill);
+      background: var(--bg-surface-3);
+      color: var(--text-primary);
+      border: 1px solid var(--border-strong);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+      font-size: 0.85rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 240ms cubic-bezier(0.2, 0, 0, 1), opacity 240ms ease;
+      z-index: 200;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- TOP APP BAR -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="13" r="8.5" stroke="var(--accent)" stroke-width="2.4" stroke-dasharray="40 14" stroke-linecap="round"/>
+            <circle cx="12" cy="13" r="2.2" fill="var(--accent)"/>
+            <path d="M12.5 3.5C14.5 2.5 16.5 3 17 4.5C15.2 5.3 13.4 4.8 12.5 3.5Z" fill="#34A853"/>
+          </svg>
+        </div>
+        <span class="brand-title">Pomodrone</span>
+        <span class="offline-pill" id="offline-pill">
+          <span class="status-dot" id="net-dot"></span>
+          <span id="net-label" data-i18n="offlineReady">Sẵn sàng ngoại tuyến</span>
+        </span>
+      </div>
+
+      <div class="topbar-actions">
+        <!-- Ambient Audio Toggle -->
+        <button class="icon-btn" id="btn-ambient-toggle" data-i18n-title="ambientTitle" title="Âm thanh nền tập trung (White/Pink/Brown Noise)" aria-label="Ambient Sound">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l12-2v13"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="18" cy="16" r="3"/>
+          </svg>
+        </button>
+
+        <!-- Mute Toggle (M) -->
+        <button class="icon-btn" id="btn-mute" data-i18n-title="muteTitle" title="Tắt / Bật âm thanh (M)" aria-label="Toggle Mute">
+          <svg id="icon-vol-on" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+          <svg id="icon-vol-off" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="23" y1="9" x2="17" y2="15"/>
+            <line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        </button>
+
+        <!-- Zen Mode Toggle (F) -->
+        <button class="icon-btn" id="btn-zen" data-i18n-title="zenTitle" title="Chế độ tập trung tối giản (F)" aria-label="Zen Mode">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"/>
+            <polyline points="9 21 3 21 3 15"/>
+            <line x1="21" y1="3" x2="14" y2="10"/>
+            <line x1="3" y1="21" x2="10" y2="14"/>
+          </svg>
+        </button>
+
+        <!-- 3-Way Theme Switcher: Light / Dark / AMOLED Pure Black -->
+        <div class="theme-group" role="group" aria-label="Theme Switcher">
+          <button class="theme-opt" data-theme-val="light" data-i18n-title="themeLight" title="Giao diện Sáng (Material Light)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+          </button>
+          <button class="theme-opt" data-theme-val="dark" data-i18n-title="themeDark" title="Giao diện Tối (Material Dark)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+          <button class="theme-opt active" data-theme-val="amoled" data-i18n-title="themeAmoled" title="Đen thuần AMOLED (#000000)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.2"/>
+              <circle cx="12" cy="12" r="3.5"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Bilingual Toggle (VI / EN) -->
+        <div class="lang-group" role="group" aria-label="Language">
+          <button class="lang-opt active" data-lang-val="vi">VI</button>
+          <button class="lang-opt" data-lang-val="en">EN</button>
+        </div>
+
+        <!-- Settings Modal Trigger -->
+        <button class="icon-btn" id="btn-settings" data-i18n-title="settingsTitle" title="Cài đặt" aria-label="Settings">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- AMBIENT FOCUS SOUND DRAWER -->
+    <section class="ambient-bar" id="ambient-bar" aria-label="Ambient Sound Generator">
+      <div class="ambient-pills">
+        <span style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);margin-right:4px;" data-i18n="ambientLabel">Tiếng ồn nền:</span>
+        <button class="chip-btn active" data-noise="none" data-i18n="noiseOff">Tắt</button>
+        <button class="chip-btn" data-noise="white" data-i18n="noiseWhite">White Noise</button>
+        <button class="chip-btn" data-noise="pink" data-i18n="noisePink">Pink Noise</button>
+        <button class="chip-btn" data-noise="brown" data-i18n="noiseBrown">Brown Noise</button>
+      </div>
+      <div class="volume-control">
+        <span style="font-size:0.78rem;color:var(--text-secondary);" data-i18n="volumeLabel">Âm lượng</span>
+        <input type="range" id="ambient-vol" min="0" max="100" value="35" aria-label="Ambient Volume" />
+        <span id="ambient-vol-val" class="tabular" style="font-size:0.78rem;width:34px;text-align:right;color:var(--text-secondary);">35%</span>
+      </div>
+    </section>
+
+    <!-- MAIN WORKSPACE -->
+    <main class="workspace">
+      <!-- LEFT: PRECISION TIMER CARD -->
+      <section class="card timer-card" aria-label="Pomodoro Timer">
+        <div class="mode-tabs" role="tablist">
+          <button class="mode-tab active" role="tab" data-mode-btn="focus" data-i18n="modeFocus">Tập trung</button>
+          <button class="mode-tab" role="tab" data-mode-btn="shortBreak" data-i18n="modeShort">Nghỉ ngắn</button>
+          <button class="mode-tab" role="tab" data-mode-btn="longBreak" data-i18n="modeLong">Nghỉ dài</button>
+        </div>
+
+        <div class="preset-row" aria-label="Quick Presets">
+          <button class="preset-pill active" data-preset="25-5-15">25 / 5</button>
+          <button class="preset-pill" data-preset="50-10-20">50 / 10</button>
+          <button class="preset-pill" data-preset="90-20-30">90 / 20</button>
+        </div>
+
+        <div class="ring-wrapper">
+          <svg class="ring-svg" viewBox="0 0 286 286" aria-hidden="true">
+            <circle class="ring-track" cx="143" cy="143" r="130" />
+            <circle class="ring-progress" id="ring-progress" cx="143" cy="143" r="130" />
+          </svg>
+          <div class="ring-inner">
+            <div class="phase-badge" id="phase-badge">PHIÊN 1 / 4</div>
+            <div class="timer-digits tabular" id="timer-display" aria-live="off">25:00</div>
+            <div class="active-task-pill" id="active-task-pill">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.4">
+                <circle cx="12" cy="12" r="9"/>
+                <circle cx="12" cy="12" r="3" fill="var(--accent)"/>
+              </svg>
+              <span id="active-task-text" data-i18n="noTaskSelected">Chưa chọn tác vụ</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cycle-dots" id="cycle-dots" aria-label="Cycle Progress"></div>
+
+        <div class="controls-row">
+          <button class="ctrl-secondary" id="btn-reset" data-i18n-title="resetTitle" title="Đặt lại phiên (R)" aria-label="Reset">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+          </button>
+
+          <button class="ctrl-primary" id="btn-toggle">
+            <svg id="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="6 4 20 12 6 20 6 4"/>
+            </svg>
+            <svg id="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+              <rect x="6" y="4" width="4" height="16" rx="1"/>
+              <rect x="14" y="4" width="4" height="16" rx="1"/>
+            </svg>
+            <span id="btn-toggle-label" data-i18n="btnStart">Bắt đầu</span>
+          </button>
+
+          <button class="ctrl-secondary" id="btn-skip" data-i18n-title="skipTitle" title="Chuyển phiên tiếp theo (S)" aria-label="Skip">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 4 15 12 5 20 5 4"/>
+              <line x1="19" y1="5" x2="19" y2="19"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="shortcut-bar">
+          <span><kbd class="kbd">Space</kbd><span data-i18n="keyStart">Chạy/Dừng</span></span>
+          <span><kbd class="kbd">R</kbd><span data-i18n="keyReset">Đặt lại</span></span>
+          <span><kbd class="kbd">S</kbd><span data-i18n="keySkip">Bỏ qua</span></span>
+          <span><kbd class="kbd">F</kbd><span data-i18n="keyZen">Tối giản</span></span>
+          <span><kbd class="kbd">M</kbd><span data-i18n="keyMute">Tắt tiếng</span></span>
+        </div>
+      </section>
+
+      <!-- RIGHT: TASK DRAWER & ANALYTICS -->
+      <div class="side-column">
+        <!-- INTEGRATED TASK DRAWER -->
+        <section class="card" aria-label="Task Manager">
+          <div class="card-header">
+            <h2 class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 11l3 3L22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+              <span data-i18n="tasksHeading">Danh sách tác vụ</span>
+            </h2>
+            <button class="text-btn" id="btn-clear-done" data-i18n="clearDone">Xóa đã xong</button>
+          </div>
+
+          <form class="task-form" id="task-form">
+            <input type="text" class="task-input" id="task-input" maxlength="100" data-i18n-placeholder="taskPlaceholder" placeholder="Thêm công việc cần tập trung..." required />
+            <div class="est-stepper" title="Số phiên Pomodoro dự kiến">
+              <button type="button" class="est-btn" id="est-dec" aria-label="Decrease">−</button>
+              <span class="est-val tabular" id="est-val">1</span>
+              <button type="button" class="est-btn" id="est-inc" aria-label="Increase">+</button>
+            </div>
+            <button type="submit" class="add-task-btn" data-i18n="btnAdd">Thêm</button>
+          </form>
+
+          <div class="task-list" id="task-list"></div>
+        </section>
+
+        <!-- PRODUCTIVITY ANALYTICS -->
+        <section class="card" aria-label="Productivity Analytics">
+          <div class="card-header">
+            <h2 class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+              </svg>
+              <span data-i18n="statsHeading">Thống kê năng suất</span>
+            </h2>
+            <span class="tabular" id="goal-progress-text" style="font-size:0.78rem;color:var(--text-secondary);font-weight:600;">0 / 8 phiên</span>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-box">
+              <span class="kpi-label" data-i18n="kpiToday">Hôm nay</span>
+              <span class="kpi-val tabular" id="kpi-today-min">0m</span>
+              <span class="kpi-sub tabular" id="kpi-today-sess">0 phiên</span>
+            </div>
+            <div class="kpi-box">
+              <span class="kpi-label" data-i18n="kpiStreak">Chuỗi liên tục</span>
+              <span class="kpi-val tabular" id="kpi-streak">0</span>
+              <span class="kpi-sub" data-i18n="kpiDays">ngày</span>
+            </div>
+            <div class="kpi-box">
+              <span class="kpi-label" data-i18n="kpiTotal">Tổng tích lũy</span>
+              <span class="kpi-val tabular" id="kpi-total-hrs">0.0h</span>
+              <span class="kpi-sub tabular" id="kpi-total-sess">0 phiên</span>
+            </div>
+          </div>
+
+          <div class="section-subhead">
+            <span data-i18n="chart7Days">7 ngày gần nhất (phút)</span>
+            <span class="tabular" id="chart-7d-total" style="color:var(--accent);">0m</span>
+          </div>
+          <div class="bar-chart" id="bar-chart"></div>
+
+          <div class="section-subhead">
+            <span data-i18n="heatmapTitle">Khung giờ tập trung cao điểm (00h–23h)</span>
+          </div>
+          <div class="heatmap-grid" id="heatmap-grid"></div>
+
+          <div class="data-actions">
+            <button type="button" class="outline-btn" id="btn-export-csv" data-i18n="exportCsv">Xuất CSV</button>
+            <button type="button" class="outline-btn" id="btn-export-json" data-i18n="exportJson">Sao lưu JSON</button>
+            <button type="button" class="outline-btn" id="btn-import-json" data-i18n="importJson">Khôi phục JSON</button>
+            <input type="file" id="import-file-input" accept=".json,application/json" style="display:none" />
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div class="modal-backdrop" id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="settings-modal-title" data-i18n="settingsHeading">Cài đặt bộ đếm & Âm thanh</h3>
+        <button class="icon-btn" id="btn-close-settings" aria-label="Close">✕</button>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-title" data-i18n="secDurations">Thời lượng (Phút)</div>
+        <div class="duration-grid">
+          <div class="field-box">
+            <label class="field-label" for="set-focus" data-i18n="lblFocusMin">Tập trung</label>
+            <input type="number" class="num-input tabular" id="set-focus" min="1" max="180" value="25" />
+          </div>
+          <div class="field-box">
+            <label class="field-label" for="set-short" data-i18n="lblShortMin">Nghỉ ngắn</label>
+            <input type="number" class="num-input tabular" id="set-short" min="1" max="60" value="5" />
+          </div>
+          <div class="field-box">
+            <label class="field-label" for="set-long" data-i18n="lblLongMin">Nghỉ dài</label>
+            <input type="number" class="num-input tabular" id="set-long" min="1" max="90" value="15" />
+          </div>
+        </div>
+        <div class="duration-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+          <div class="field-box">
+            <label class="field-label" for="set-interval" data-i18n="lblInterval">Số phiên trước nghỉ dài</label>
+            <input type="number" class="num-input tabular" id="set-interval" min="2" max="10" value="4" />
+          </div>
+          <div class="field-box">
+            <label class="field-label" for="set-goal" data-i18n="lblDailyGoal">Mục tiêu phiên / ngày</label>
+            <input type="number" class="num-input tabular" id="set-goal" min="1" max="20" value="8" />
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-title" data-i18n="secAutomation">Tự động hóa & Flowtime</div>
+
+        <div class="switch-row">
+          <div class="switch-info">
+            <span class="switch-title" data-i18n="lblFlowtime">Chế độ Flowtime (Overtime)</span>
+            <span class="switch-desc" data-i18n="descFlowtime">Đếm tiếp thời gian làm thêm khi hết giờ tập trung thay vì dừng đột ngột</span>
+          </div>
+          <button type="button" class="toggle-switch" role="switch" id="sw-flowtime" aria-checked="false"></button>
+        </div>
+
+        <div class="switch-row">
+          <div class="switch-info">
+            <span class="switch-title" data-i18n="lblAutoBreak">Tự động bắt đầu giờ nghỉ</span>
+            <span class="switch-desc" data-i18n="descAutoBreak">Chuyển sang nghỉ ngắn/dài ngay sau khi hoàn tất phiên tập trung</span>
+          </div>
+          <button type="button" class="toggle-switch" role="switch" id="sw-auto-break" aria-checked="false"></button>
+        </div>
+
+        <div class="switch-row">
+          <div class="switch-info">
+            <span class="switch-title" data-i18n="lblAutoFocus">Tự động bắt đầu phiên tập trung</span>
+            <span class="switch-desc" data-i18n="descAutoFocus">Tiếp tục phiên tập trung mới ngay khi hết giờ nghỉ</span>
+          </div>
+          <button type="button" class="toggle-switch" role="switch" id="sw-auto-focus" aria-checked="false"></button>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-title" data-i18n="secAudio">Âm thanh tổng hợp & Thông báo</div>
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+          <div class="field-box" style="flex:1;">
+            <label class="field-label" for="set-chime" data-i18n="lblChimeSound">Âm báo kết thúc phiên</label>
+            <select class="select-input" id="set-chime">
+              <option value="bell">Crystal Bell</option>
+              <option value="marimba">Warm Marimba</option>
+              <option value="digital">Digital Pulse</option>
+              <option value="gong">Soft Gong</option>
+            </select>
+          </div>
+          <button type="button" class="outline-btn" id="btn-test-chime" style="height:38px;" data-i18n="btnTestSound">Nghe thử</button>
+        </div>
+
+        <div class="switch-row">
+          <div class="switch-info">
+            <span class="switch-title" data-i18n="lblAmbientFocusOnly">Chỉ phát tiếng ồn nền khi tập trung</span>
+            <span class="switch-desc" data-i18n="descAmbientFocusOnly">Tự động tạm ngưng tiếng ồn nền trong giờ nghỉ</span>
+          </div>
+          <button type="button" class="toggle-switch" role="switch" id="sw-ambient-focus" aria-checked="true"></button>
+        </div>
+
+        <div class="switch-row">
+          <div class="switch-info">
+            <span class="switch-title" data-i18n="lblDesktopNotif">Thông báo trình duyệt</span>
+            <span class="switch-desc" data-i18n="descDesktopNotif">Hiển thị thông báo hệ thống khi chuyển phiên</span>
+          </div>
+          <button type="button" class="toggle-switch" role="switch" id="sw-notif" aria-checked="false"></button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="outline-btn" id="btn-cancel-settings" style="height:38px;padding:0 16px;" data-i18n="btnCancel">Hủy</button>
+        <button type="button" class="add-task-btn" id="btn-save-settings" style="height:38px;padding:0 18px;" data-i18n="btnSave">Lưu cài đặt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      /* ========================================================================
+         1. BILINGUAL DICTIONARY (Vietnamese & English — Zero Layout Shift)
+         ======================================================================== */
+      const I18N = {
+        vi: {
+          offlineReady: "Sẵn sàng ngoại tuyến",
+          offlineActive: "Đang ngoại tuyến",
+          ambientTitle: "Âm thanh nền tập trung",
+          muteTitle: "Tắt / Bật âm thanh (M)",
+          zenTitle: "Chế độ tối giản toàn màn hình (F)",
+          themeLight: "Giao diện Sáng",
+          themeDark: "Giao diện Tối",
+          themeAmoled: "Đen thuần AMOLED",
+          settingsTitle: "Cài đặt",
+          ambientLabel: "Tiếng ồn nền:",
+          noiseOff: "Tắt",
+          noiseWhite: "White Noise",
+          noisePink: "Pink Noise",
+          noiseBrown: "Brown Noise",
+          volumeLabel: "Âm lượng",
+          modeFocus: "Tập trung",
+          modeShort: "Nghỉ ngắn",
+          modeLong: "Nghỉ dài",
+          noTaskSelected: "Chưa chọn tác vụ",
+          resetTitle: "Đặt lại phiên (R)",
+          skipTitle: "Chuyển phiên tiếp theo (S)",
+          btnStart: "Bắt đầu",
+          btnPause: "Tạm dừng",
+          btnResume: "Tiếp tục",
+          btnFinishFlow: "Hoàn tất phiên",
+          keyStart: "Chạy/Dừng",
+          keyReset: "Đặt lại",
+          keySkip: "Bỏ qua",
+          keyZen: "Tối giản",
+          keyMute: "Tắt tiếng",
+          tasksHeading: "Danh sách tác vụ",
+          clearDone: "Xóa đã xong",
+          taskPlaceholder: "Thêm công việc cần tập trung...",
+          btnAdd: "Thêm",
+          emptyTasks: "Chưa có tác vụ nào. Thêm đầu việc bên trên để theo dõi số phiên Pomodoro.",
+          statsHeading: "Thống kê năng suất",
+          kpiToday: "Hôm nay",
+          kpiStreak: "Chuỗi liên tục",
+          kpiDays: "ngày",
+          kpiTotal: "Tổng tích lũy",
+          chart7Days: "7 ngày gần nhất (phút)",
+          heatmapTitle: "Khung giờ tập trung cao điểm (00h–23h)",
+          exportCsv: "Xuất CSV",
+          exportJson: "Sao lưu JSON",
+          importJson: "Khôi phục JSON",
+          settingsHeading: "Cài đặt bộ đếm & Âm thanh",
+          secDurations: "Thời lượng (Phút)",
+          lblFocusMin: "Tập trung",
+          lblShortMin: "Nghỉ ngắn",
+          lblLongMin: "Nghỉ dài",
+          lblInterval: "Số phiên trước nghỉ dài",
+          lblDailyGoal: "Mục tiêu phiên / ngày",
+          secAutomation: "Tự động hóa & Flowtime",
+          lblFlowtime: "Chế độ Flowtime (Overtime)",
+          descFlowtime: "Đếm tiếp thời gian làm thêm khi hết giờ tập trung thay vì dừng đột ngột",
+          lblAutoBreak: "Tự động bắt đầu giờ nghỉ",
+          descAutoBreak: "Chuyển sang nghỉ ngắn/dài ngay sau khi hoàn tất phiên tập trung",
+          lblAutoFocus: "Tự động bắt đầu phiên tập trung",
+          descAutoFocus: "Tiếp tục phiên tập trung mới ngay khi hết giờ nghỉ",
+          secAudio: "Âm thanh tổng hợp & Thông báo",
+          lblChimeSound: "Âm báo kết thúc phiên",
+          btnTestSound: "Nghe thử",
+          lblAmbientFocusOnly: "Chỉ phát tiếng ồn nền khi tập trung",
+          descAmbientFocusOnly: "Tự động tạm ngưng tiếng ồn nền trong giờ nghỉ",
+          lblDesktopNotif: "Thông báo trình duyệt",
+          descDesktopNotif: "Hiển thị thông báo hệ thống khi chuyển phiên",
+          btnCancel: "Hủy",
+          btnSave: "Lưu cài đặt",
+          badgeRound: (curr, total) => `PHIÊN ${curr} / ${total}`,
+          badgeShort: "NGHỈ NGẮN",
+          badgeLong: "NGHỈ DÀI",
+          badgeFlow: "FLOWTIME +",
+          sessionsUnit: (n) => `${n} phiên`,
+          goalUnit: (c, g) => `${c} / ${g} phiên`,
+          toastSaved: "Đã lưu cài đặt",
+          toastBackupOk: "Đã tải xuống bản sao lưu JSON",
+          toastCsvOk: "Đã xuất báo cáo CSV",
+          toastRestoreOk: "Đã khôi phục dữ liệu thành công",
+          toastRestoreErr: "Tệp JSON không hợp lệ",
+          toastFocusDone: "Hoàn thành phiên tập trung! Hãy nghỉ ngơi.",
+          toastBreakDone: "Hết giờ nghỉ! Sẵn sàng tập trung tiếp.",
+          toastFlowStart: "Đạt mục tiêu! Đang đếm tiếp thời gian Flowtime...",
+          daysShort: ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
+        },
+        en: {
+          offlineReady: "Offline Ready",
+          offlineActive: "Offline Mode",
+          ambientTitle: "Focus Ambient Noise",
+          muteTitle: "Mute / Unmute (M)",
+          zenTitle: "Fullscreen Zen Mode (F)",
+          themeLight: "Material Light",
+          themeDark: "Material Dark",
+          themeAmoled: "AMOLED Pure Black",
+          settingsTitle: "Settings",
+          ambientLabel: "Ambient Noise:",
+          noiseOff: "Off",
+          noiseWhite: "White Noise",
+          noisePink: "Pink Noise",
+          noiseBrown: "Brown Noise",
+          volumeLabel: "Volume",
+          modeFocus: "Focus",
+          modeShort: "Short Break",
+          modeLong: "Long Break",
+          noTaskSelected: "No task selected",
+          resetTitle: "Reset Session (R)",
+          skipTitle: "Skip Phase (S)",
+          btnStart: "Start",
+          btnPause: "Pause",
+          btnResume: "Resume",
+          btnFinishFlow: "Finish Session",
+          keyStart: "Start/Pause",
+          keyReset: "Reset",
+          keySkip: "Skip",
+          keyZen: "Zen",
+          keyMute: "Mute",
+          tasksHeading: "Task Drawer",
+          clearDone: "Clear done",
+          taskPlaceholder: "Add a task to focus on...",
+          btnAdd: "Add",
+          emptyTasks: "No tasks yet. Add one above to track Pomodoro sessions.",
+          statsHeading: "Productivity Analytics",
+          kpiToday: "Today",
+          kpiStreak: "Day Streak",
+          kpiDays: "days",
+          kpiTotal: "All-Time",
+          chart7Days: "Last 7 Days (minutes)",
+          heatmapTitle: "Peak Focus Hours (00h–23h)",
+          exportCsv: "Export CSV",
+          exportJson: "Backup JSON",
+          importJson: "Restore JSON",
+          settingsHeading: "Timer & Audio Settings",
+          secDurations: "Durations (Minutes)",
+          lblFocusMin: "Focus",
+          lblShortMin: "Short Break",
+          lblLongMin: "Long Break",
+          lblInterval: "Sessions before long break",
+          lblDailyGoal: "Daily session goal",
+          secAutomation: "Automation & Flowtime",
+          lblFlowtime: "Flowtime Mode (Overtime)",
+          descFlowtime: "Keep counting extra focus time after countdown hits zero instead of stopping",
+          lblAutoBreak: "Auto-start Breaks",
+          descAutoBreak: "Automatically start short/long break after a focus session",
+          lblAutoFocus: "Auto-start Focus",
+          descAutoFocus: "Automatically start the next focus session after a break",
+          secAudio: "Synthesized Audio & Alerts",
+          lblChimeSound: "Completion Chime",
+          btnTestSound: "Preview",
+          lblAmbientFocusOnly: "Play ambient noise only in Focus",
+          descAmbientFocusOnly: "Automatically pause background noise during breaks",
+          lblDesktopNotif: "Browser Notifications",
+          descDesktopNotif: "Show system notification on phase transitions",
+          btnCancel: "Cancel",
+          btnSave: "Save Settings",
+          badgeRound: (curr, total) => `SESSION ${curr} / ${total}`,
+          badgeShort: "SHORT BREAK",
+          badgeLong: "LONG BREAK",
+          badgeFlow: "FLOWTIME +",
+          sessionsUnit: (n) => `${n} ${n === 1 ? "session" : "sessions"}`,
+          goalUnit: (c, g) => `${c} / ${g} sessions`,
+          toastSaved: "Settings saved",
+          toastBackupOk: "JSON backup downloaded",
+          toastCsvOk: "CSV report exported",
+          toastRestoreOk: "Data restored successfully",
+          toastRestoreErr: "Invalid JSON backup file",
+          toastFocusDone: "Focus session complete! Time for a break.",
+          toastBreakDone: "Break is over! Ready to focus.",
+          toastFlowStart: "Target reached! Counting Flowtime overtime...",
+          daysShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        }
+      };
+
+      /* ========================================================================
+         2. PERSISTENT STATE STORE (localStorage with Schema Validation)
+         ======================================================================== */
+      const STORAGE_KEY = "pomodrone_state_v1";
+
+      const DEFAULT_STATE = {
+        lang: "vi",
+        theme: "amoled",
+        muted: false,
+        settings: {
+          focusMin: 25,
+          shortMin: 5,
+          longMin: 15,
+          longInterval: 4,
+          dailyGoal: 8,
+          flowtime: false,
+          autoBreak: false,
+          autoFocus: false,
+          chime: "bell",
+          ambientFocusOnly: true,
+          desktopNotif: false
+        },
+        ambient: {
+          type: "none",
+          volume: 35
+        },
+        tasks: [],
+        selectedTaskId: null,
+        logs: [] // { date: "YYYY-MM-DD", hour: 0..23, minutes: number, taskId: string|null, ts: number }
+      };
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return structuredClone(DEFAULT_STATE);
+          const parsed = JSON.parse(raw);
+          return {
+            ...structuredClone(DEFAULT_STATE),
+            ...parsed,
+            settings: { ...DEFAULT_STATE.settings, ...(parsed.settings || {}) },
+            ambient: { ...DEFAULT_STATE.ambient, ...(parsed.ambient || {}) },
+            tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+            logs: Array.isArray(parsed.logs) ? parsed.logs : []
+          };
+        } catch {
+          return structuredClone(DEFAULT_STATE);
+        }
+      }
+
+      let state = loadState();
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (err) {
+          console.warn("Storage quota warning:", err);
+        }
+      }
+
+      /* ========================================================================
+         3. WEB AUDIO API SYNTHESIZER (Chimes + White/Pink/Brown Noise)
+         ======================================================================== */
+      class SoundEngine {
+        constructor() {
+          this.ctx = null;
+          this.noiseNode = null;
+          this.noiseGain = null;
+          this.activeNoiseType = "none";
+        }
+
+        ensureContext() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+          }
+          if (this.ctx && this.ctx.state === "suspended") {
+            this.ctx.resume().catch(() => {});
+          }
+          return this.ctx;
+        }
+
+        playChime(profile = state.settings.chime, force = false) {
+          if (state.muted && !force) return;
+          const ctx = this.ensureContext();
+          if (!ctx) return;
+
+          const now = ctx.currentTime;
+          const master = ctx.createGain();
+          master.gain.setValueAtTime(0.32, now);
+          master.connect(ctx.destination);
+
+          if (profile === "bell") {
+            const freqs = [523.25, 659.25, 783.99, 1046.5];
+            freqs.forEach((f, idx) => {
+              const osc = ctx.createOscillator();
+              const g = ctx.createGain();
+              osc.type = idx % 2 === 0 ? "sine" : "triangle";
+              osc.frequency.setValueAtTime(f, now + idx * 0.09);
+              g.gain.setValueAtTime(0.0001, now + idx * 0.09);
+              g.gain.exponentialRampToValueAtTime(0.35 / (idx * 0.4 + 1), now + idx * 0.09 + 0.02);
+              g.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.09 + 1.15);
+              osc.connect(g);
+              g.connect(master);
+              osc.start(now + idx * 0.09);
+              osc.stop(now + idx * 0.09 + 1.2);
+            });
+          } else if (profile === "marimba") {
+            const notes = [440, 554.37, 659.25];
+            notes.forEach((f, idx) => {
+              const t = now + idx * 0.11;
+              const osc = ctx.createOscillator();
+              const g = ctx.createGain();
+              osc.type = "sine";
+              osc.frequency.setValueAtTime(f, t);
+              g.gain.setValueAtTime(0.001, t);
+              g.gain.linearRampToValueAtTime(0.45, t + 0.012);
+              g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+              osc.connect(g);
+              g.connect(master);
+              osc.start(t);
+              osc.stop(t + 0.48);
+            });
+          } else if (profile === "digital") {
+            [880, 1174.66].forEach((f, idx) => {
+              const t = now + idx * 0.14;
+              const osc = ctx.createOscillator();
+              const g = ctx.createGain();
+              osc.type = "triangle";
+              osc.frequency.setValueAtTime(f, t);
+              g.gain.setValueAtTime(0.001, t);
+              g.gain.linearRampToValueAtTime(0.32, t + 0.015);
+              g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+              osc.connect(g);
+              g.connect(master);
+              osc.start(t);
+              osc.stop(t + 0.3);
+            });
+          } else if (profile === "gong") {
+            [220, 330, 440].forEach((f, idx) => {
+              const osc = ctx.createOscillator();
+              const g = ctx.createGain();
+              osc.type = "sine";
+              osc.frequency.setValueAtTime(f, now);
+              g.gain.setValueAtTime(0.0001, now);
+              g.gain.linearRampToValueAtTime(0.32 / (idx + 1), now + 0.08);
+              g.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+              osc.connect(g);
+              g.connect(master);
+              osc.start(now);
+              osc.stop(now + 1.85);
+            });
+          }
+        }
+
+        syncAmbient(shouldPlay) {
+          const type = state.ambient.type;
+          const vol = state.muted || !shouldPlay || type === "none" ? 0 : (state.ambient.volume / 100) * 0.28;
+
+          if (vol === 0) {
+            if (this.noiseGain && this.ctx) {
+              this.noiseGain.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.08);
+            }
+            return;
+          }
+
+          const ctx = this.ensureContext();
+          if (!ctx) return;
+
+          if (this.activeNoiseType !== type || !this.noiseNode) {
+            this.stopNoiseImmediate();
+            const bufferSize = ctx.sampleRate * 4;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            if (type === "white") {
+              for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+              }
+            } else if (type === "pink") {
+              let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+              for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                b0 = 0.99886 * b0 + white * 0.0555179;
+                b1 = 0.99332 * b1 + white * 0.0750759;
+                b2 = 0.96900 * b2 + white * 0.1538520;
+                b3 = 0.86650 * b3 + white * 0.3104856;
+                b4 = 0.55000 * b4 + white * 0.5329522;
+                b5 = -0.7616 * b5 - white * 0.0168980;
+                data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.05;
+                b6 = white * 0.115926;
+              }
+            } else if (type === "brown") {
+              let lastOut = 0.0;
+              for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                data[i] = (lastOut + 0.02 * white) / 1.02;
+                lastOut = data[i];
+                data[i] *= 2.8;
+              }
+            }
+
+            const src = ctx.createBufferSource();
+            src.buffer = buffer;
+            src.loop = true;
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = "lowpass";
+            filter.frequency.value = type === "white" ? 2800 : type === "pink" ? 1800 : 900;
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+            gain.gain.setTargetAtTime(vol, ctx.currentTime, 0.12);
+
+            src.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+            src.start();
+
+            this.noiseNode = src;
+            this.noiseGain = gain;
+            this.activeNoiseType = type;
+          } else if (this.noiseGain) {
+            this.noiseGain.gain.setTargetAtTime(vol, ctx.currentTime, 0.08);
+          }
+        }
+
+        stopNoiseImmediate() {
+          if (this.noiseNode) {
+            try { this.noiseNode.stop(); } catch {}
+            try { this.noiseNode.disconnect(); } catch {}
+            this.noiseNode = null;
+          }
+          this.noiseGain = null;
+          this.activeNoiseType = "none";
+        }
+      }
+
+      const sound = new SoundEngine();
+
+      /* ========================================================================
+         4. DRIFT-FREE TIMER ENGINE (Inline Web Worker + Visibility Sync + Flowtime)
+         ======================================================================== */
+      const RING_RADIUS = 130;
+      const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+      const ringProgressEl = document.getElementById("ring-progress");
+      ringProgressEl.style.strokeDasharray = `${RING_CIRCUMFERENCE} ${RING_CIRCUMFERENCE}`;
+
+      const timerState = {
+        mode: "focus",          // "focus" | "shortBreak" | "longBreak"
+        status: "idle",         // "idle" | "running" | "paused" | "flowtime"
+        completedInCycle: 0,    // 0 .. longInterval - 1
+        totalDurationMs: state.settings.focusMin * 60 * 1000,
+        remainingMs: state.settings.focusMin * 60 * 1000,
+        targetEndTime: null,
+        flowStartTime: null,
+        flowElapsedMs: 0
+      };
+
+      // Inline Web Worker prevents background tab timer throttling
+      let tickerWorker = null;
+      try {
+        const workerCode = `
+          let id = null;
+          self.onmessage = (e) => {
+            if (e.data === "start") {
+              if (id) clearInterval(id);
+              id = setInterval(() => self.postMessage("tick"), 100);
+            } else if (e.data === "stop") {
+              if (id) clearInterval(id);
+              id = null;
+            }
+          };
+        `;
+        const blob = new Blob([workerCode], { type: "application/javascript" });
+        tickerWorker = new Worker(URL.createObjectURL(blob));
+        tickerWorker.onmessage = () => onTimerTick();
+      } catch {
+        // Fallback if strict CSP blocks Blob Workers
+        setInterval(() => {
+          if (timerState.status === "running" || timerState.status === "flowtime") {
+            onTimerTick();
+          }
+        }, 120);
+      }
+
+      function getDurationMsForMode(mode) {
+        if (mode === "focus") return state.settings.focusMin * 60 * 1000;
+        if (mode === "shortBreak") return state.settings.shortMin * 60 * 1000;
+        return state.settings.longMin * 60 * 1000;
+      }
+
+      function setMode(mode, autoStart = false) {
+        timerState.mode = mode;
+        timerState.status = "idle";
+        timerState.targetEndTime = null;
+        timerState.flowStartTime = null;
+        timerState.flowElapsedMs = 0;
+        timerState.totalDurationMs = getDurationMsForMode(mode);
+        timerState.remainingMs = timerState.totalDurationMs;
+
+        if (tickerWorker) tickerWorker.postMessage("stop");
+        updateAmbientPlayback();
+        renderTimerUI();
+
+        if (autoStart) {
+          startTimer();
+        }
+      }
+
+      function startTimer() {
+        sound.ensureContext();
+        const now = Date.now();
+        if (timerState.status === "flowtime") {
+          // Finish Flowtime session and transition to break
+          finishFlowtimeSession();
+          return;
+        }
+        timerState.status = "running";
+        timerState.targetEndTime = now + timerState.remainingMs;
+        if (tickerWorker) tickerWorker.postMessage("start");
+        updateAmbientPlayback();
+        renderTimerUI();
+        requestAnimationFrame(animationLoop);
+      }
+
+      function pauseTimer() {
+        if (timerState.status !== "running") return;
+        timerState.remainingMs = Math.max(0, timerState.targetEndTime - Date.now());
+        timerState.targetEndTime = null;
+        timerState.status = "paused";
+        if (tickerWorker) tickerWorker.postMessage("stop");
+        updateAmbientPlayback();
+        renderTimerUI();
+      }
+
+      function resetTimer() {
+        if (tickerWorker) tickerWorker.postMessage("stop");
+        timerState.status = "idle";
+        timerState.targetEndTime = null;
+        timerState.flowStartTime = null;
+        timerState.flowElapsedMs = 0;
+        timerState.totalDurationMs = getDurationMsForMode(timerState.mode);
+        timerState.remainingMs = timerState.totalDurationMs;
+        updateAmbientPlayback();
+        renderTimerUI();
+      }
+
+      function skipPhase() {
+        if (timerState.status === "flowtime") {
+          finishFlowtimeSession();
+          return;
+        }
+        if (timerState.mode === "focus") {
+          const nextBreak = (timerState.completedInCycle + 1) >= state.settings.longInterval ? "longBreak" : "shortBreak";
+          setMode(nextBreak, false);
+        } else {
+          setMode("focus", false);
+        }
+      }
+
+      function onTimerTick() {
+        const now = Date.now();
+        if (timerState.status === "running") {
+          const left = timerState.targetEndTime - now;
+          if (left <= 0) {
+            timerState.remainingMs = 0;
+            handleCountdownComplete(now);
+          } else {
+            timerState.remainingMs = left;
+            renderTimerDisplayOnly();
+          }
+        } else if (timerState.status === "flowtime") {
+          timerState.flowElapsedMs = now - timerState.flowStartTime;
+          renderTimerDisplayOnly();
+        }
+      }
+
+      function animationLoop() {
+        if (timerState.status === "running" || timerState.status === "flowtime") {
+          onTimerTick();
+          requestAnimationFrame(animationLoop);
+        }
+      }
+
+      function handleCountdownComplete(now) {
+        const dict = I18N[state.lang];
+        if (timerState.mode === "focus") {
+          if (state.settings.flowtime) {
+            // Enter Flowtime Overtime instead of interrupting deep work
+            timerState.status = "flowtime";
+            timerState.flowStartTime = now;
+            timerState.flowElapsedMs = 0;
+            sound.playChime();
+            showToast(dict.toastFlowStart);
+            sendSystemNotification("Pomodrone", dict.toastFlowStart);
+            renderTimerUI();
+            return;
+          }
+
+          if (tickerWorker) tickerWorker.postMessage("stop");
+          recordCompletedFocus(state.settings.focusMin);
+          sound.playChime();
+          showToast(dict.toastFocusDone);
+          sendSystemNotification("Pomodrone", dict.toastFocusDone);
+
+          timerState.completedInCycle += 1;
+          if (timerState.completedInCycle >= state.settings.longInterval) {
+            timerState.completedInCycle = 0;
+            setMode("longBreak", state.settings.autoBreak);
+          } else {
+            setMode("shortBreak", state.settings.autoBreak);
+          }
+        } else {
+          // Break completed
+          if (tickerWorker) tickerWorker.postMessage("stop");
+          sound.playChime();
+          showToast(dict.toastBreakDone);
+          sendSystemNotification("Pomodrone", dict.toastBreakDone);
+          setMode("focus", state.settings.autoFocus);
+        }
+      }
+
+      function finishFlowtimeSession() {
+        if (tickerWorker) tickerWorker.postMessage("stop");
+        const extraMin = Math.round(timerState.flowElapsedMs / 60000);
+        const totalMin = Math.max(1, state.settings.focusMin + extraMin);
+        recordCompletedFocus(totalMin);
+
+        timerState.completedInCycle += 1;
+        if (timerState.completedInCycle >= state.settings.longInterval) {
+          timerState.completedInCycle = 0;
+          setMode("longBreak", state.settings.autoBreak);
+        } else {
+          setMode("shortBreak", state.settings.autoBreak);
+        }
+      }
+
+      function updateAmbientPlayback() {
+        const isFocusActive = timerState.mode === "focus" && (timerState.status === "running" || timerState.status === "flowtime");
+        const isAnyActive = timerState.status === "running" || timerState.status === "flowtime";
+        const shouldPlay = state.settings.ambientFocusOnly ? isFocusActive : isAnyActive;
+        sound.syncAmbient(shouldPlay);
+      }
+
+      // Immediate sync when user switches back to this browser tab
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && (timerState.status === "running" || timerState.status === "flowtime")) {
+          onTimerTick();
+        }
+      });
+
+      /* ========================================================================
+         5. SESSION LOGGING & ANALYTICS ENGINE
+         ======================================================================== */
+      function getLocalDateStr(dateObj = new Date()) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+        const d = String(dateObj.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      }
+
+      function recordCompletedFocus(minutes) {
+        const now = new Date();
+        state.logs.push({
+          date: getLocalDateStr(now),
+          hour: now.getHours(),
+          minutes,
+          taskId: state.selectedTaskId || null,
+          ts: now.getTime()
+        });
+
+        if (state.selectedTaskId) {
+          const task = state.tasks.find((t) => t.id === state.selectedTaskId);
+          if (task) {
+            task.actual = (task.actual || 0) + 1;
+          }
+        }
+        saveState();
+        renderTasks();
+        renderAnalytics();
+      }
+
+      function computeStreak() {
+        if (!state.logs.length) return 0;
+        const activeDates = new Set(state.logs.map((l) => l.date));
+        let streak = 0;
+        const cursor = new Date();
+        const todayStr = getLocalDateStr(cursor);
+
+        // If today has no session yet, check if yesterday had one so active streak isn't broken mid-day
+        if (!activeDates.has(todayStr)) {
+          cursor.setDate(cursor.getDate() - 1);
+          if (!activeDates.has(getLocalDateStr(cursor))) return 0;
+        }
+
+        while (activeDates.has(getLocalDateStr(cursor))) {
+          streak += 1;
+          cursor.setDate(cursor.getDate() - 1);
+        }
+        return streak;
+      }
+
+      /* ========================================================================
+         6. UI RENDERING (Timer, Favicon, Tasks, Charts, Heatmap)
+         ======================================================================== */
+      function formatMMSS(ms) {
+        const totalSec = Math.ceil(ms / 1000);
+        const mins = Math.floor(totalSec / 60);
+        const secs = totalSec % 60;
+        return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+      }
+
+      let lastFaviconKey = "";
+      function updateDynamicFavicon(progressRatio, isFlowtime) {
+        const color = isFlowtime
+          ? "#F9AB00"
+          : timerState.mode === "focus"
+            ? "#EA4335"
+            : timerState.mode === "shortBreak"
+              ? "#34A853"
+              : "#4285F4";
+        const bucket = Math.round(progressRatio * 20);
+        const key = `${color}-${bucket}`;
+        if (key === lastFaviconKey) return;
+        lastFaviconKey = key;
+
+        const r = 11;
+        const c = 2 * Math.PI * r;
+        const offset = c * (1 - Math.max(0.05, Math.min(1, progressRatio)));
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+          <rect width="32" height="32" rx="8" fill="#121212"/>
+          <circle cx="16" cy="16" r="${r}" fill="none" stroke="#2D2D33" stroke-width="3.5"/>
+          <circle cx="16" cy="16" r="${r}" fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round"
+            stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}" transform="rotate(-90 16 16)"/>
+        </svg>`;
+        const link = document.getElementById("dynamic-favicon");
+        if (link) {
+          link.href = "data:image/svg+xml," + encodeURIComponent(svg);
+        }
+      }
+
+      function renderTimerDisplayOnly() {
+        const dict = I18N[state.lang];
+        const displayEl = document.getElementById("timer-display");
+        let timeStr = "";
+        let ratio = 1;
+
+        if (timerState.status === "flowtime") {
+          const sec = Math.floor(timerState.flowElapsedMs / 1000);
+          const m = Math.floor(sec / 60);
+          const s = sec % 60;
+          timeStr = `+${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+          ratio = 1;
+          ringProgressEl.style.strokeDashoffset = "0";
+        } else {
+          timeStr = formatMMSS(timerState.remainingMs);
+          ratio = timerState.totalDurationMs > 0 ? timerState.remainingMs / timerState.totalDurationMs : 0;
+          const offset = RING_CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, ratio)));
+          ringProgressEl.style.strokeDashoffset = offset.toFixed(2);
+        }
+
+        if (displayEl.textContent !== timeStr) {
+          displayEl.textContent = timeStr;
+          const modeLabel =
+            timerState.status === "flowtime"
+              ? "Flowtime"
+              : timerState.mode === "focus"
+                ? dict.modeFocus
+                : timerState.mode === "shortBreak"
+                  ? dict.modeShort
+                  : dict.modeLong;
+          document.title = `${timeStr} · ${modeLabel} — Pomodrone`;
+        }
+        updateDynamicFavicon(ratio, timerState.status === "flowtime");
+      }
+
+      function renderTimerUI() {
+        const dict = I18N[state.lang];
+        const effectiveMode = timerState.status === "flowtime" ? "flowtime" : timerState.mode;
+        document.documentElement.setAttribute("data-mode", effectiveMode);
+
+        // Mode tabs
+        document.querySelectorAll("[data-mode-btn]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.modeBtn === timerState.mode);
+        });
+
+        // Badge
+        const badgeEl = document.getElementById("phase-badge");
+        if (timerState.status === "flowtime") {
+          badgeEl.textContent = dict.badgeFlow;
+        } else if (timerState.mode === "focus") {
+          badgeEl.textContent = dict.badgeRound(timerState.completedInCycle + 1, state.settings.longInterval);
+        } else if (timerState.mode === "shortBreak") {
+          badgeEl.textContent = dict.badgeShort;
+        } else {
+          badgeEl.textContent = dict.badgeLong;
+        }
+
+        // Cycle dots
+        const dotsEl = document.getElementById("cycle-dots");
+        dotsEl.innerHTML = "";
+        for (let i = 0; i < state.settings.longInterval; i++) {
+          const dot = document.createElement("span");
+          dot.className = "cycle-dot" + (i < timerState.completedInCycle ? " done" : "");
+          dotsEl.appendChild(dot);
+        }
+
+        // Primary Button state
+        const playIcon = document.getElementById("icon-play");
+        const pauseIcon = document.getElementById("icon-pause");
+        const labelEl = document.getElementById("btn-toggle-label");
+
+        if (timerState.status === "running") {
+          playIcon.style.display = "none";
+          pauseIcon.style.display = "block";
+          labelEl.textContent = dict.btnPause;
+        } else if (timerState.status === "flowtime") {
+          playIcon.style.display = "block";
+          pauseIcon.style.display = "none";
+          labelEl.textContent = dict.btnFinishFlow;
+        } else if (timerState.status === "paused") {
+          playIcon.style.display = "block";
+          pauseIcon.style.display = "none";
+          labelEl.textContent = dict.btnResume;
+        } else {
+          playIcon.style.display = "block";
+          pauseIcon.style.display = "none";
+          labelEl.textContent = dict.btnStart;
+        }
+
+        // Active task inside ring
+        const taskTextEl = document.getElementById("active-task-text");
+        const selectedTask = state.tasks.find((t) => t.id === state.selectedTaskId && !t.completed);
+        if (selectedTask) {
+          taskTextEl.textContent = selectedTask.title;
+        } else {
+          taskTextEl.textContent = dict.noTaskSelected;
+        }
+
+        // Preset highlight
+        const currentSig = `${state.settings.focusMin}-${state.settings.shortMin}-${state.settings.longMin}`;
+        document.querySelectorAll("[data-preset]").forEach((p) => {
+          p.classList.toggle("active", p.dataset.preset === currentSig);
+        });
+
+        renderTimerDisplayOnly();
+      }
+
+      function renderTasks() {
+        const listEl = document.getElementById("task-list");
+        const dict = I18N[state.lang];
+        listEl.innerHTML = "";
+
+        if (!state.tasks.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty-state";
+          empty.textContent = dict.emptyTasks;
+          listEl.appendChild(empty);
+          renderTimerUI();
+          return;
+        }
+
+        state.tasks.forEach((task) => {
+          const row = document.createElement("div");
+          row.className = "task-item" + (task.completed ? " completed" : "") + (task.id === state.selectedTaskId ? " selected" : "");
+
+          const check = document.createElement("button");
+          check.type = "button";
+          check.className = "task-check";
+          check.setAttribute("aria-label", "Toggle Complete");
+          check.innerHTML = task.completed
+            ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`
+            : "";
+          check.addEventListener("click", (e) => {
+            e.stopPropagation();
+            task.completed = !task.completed;
+            if (task.completed && state.selectedTaskId === task.id) {
+              const nextOpen = state.tasks.find((t) => !t.completed);
+              state.selectedTaskId = nextOpen ? nextOpen.id : null;
+            }
+            saveState();
+            renderTasks();
+          });
+
+          const title = document.createElement("span");
+          title.className = "task-title";
+          title.textContent = task.title;
+
+          const count = document.createElement("span");
+          count.className = "task-count tabular";
+          count.textContent = `${task.actual || 0}/${task.est || 1}`;
+
+          const del = document.createElement("button");
+          del.type = "button";
+          del.className = "task-del";
+          del.setAttribute("aria-label", "Delete Task");
+          del.textContent = "✕";
+          del.addEventListener("click", (e) => {
+            e.stopPropagation();
+            state.tasks = state.tasks.filter((t) => t.id !== task.id);
+            if (state.selectedTaskId === task.id) {
+              const nextOpen = state.tasks.find((t) => !t.completed);
+              state.selectedTaskId = nextOpen ? nextOpen.id : null;
+            }
+            saveState();
+            renderTasks();
+          });
+
+          row.addEventListener("click", () => {
+            state.selectedTaskId = task.id;
+            saveState();
+            renderTasks();
+          });
+
+          row.append(check, title, count, del);
+          listEl.appendChild(row);
+        });
+
+        renderTimerUI();
+      }
+
+      function renderAnalytics() {
+        const dict = I18N[state.lang];
+        const todayStr = getLocalDateStr();
+
+        const todayLogs = state.logs.filter((l) => l.date === todayStr);
+        const todayMin = todayLogs.reduce((acc, l) => acc + (l.minutes || 0), 0);
+        const todaySess = todayLogs.length;
+
+        const totalMin = state.logs.reduce((acc, l) => acc + (l.minutes || 0), 0);
+        const totalSess = state.logs.length;
+        const streak = computeStreak();
+
+        document.getElementById("kpi-today-min").textContent = `${todayMin}m`;
+        document.getElementById("kpi-today-sess").textContent = dict.sessionsUnit(todaySess);
+        document.getElementById("kpi-streak").textContent = String(streak);
+        document.getElementById("kpi-total-hrs").textContent = `${(totalMin / 60).toFixed(1)}h`;
+        document.getElementById("kpi-total-sess").textContent = dict.sessionsUnit(totalSess);
+        document.getElementById("goal-progress-text").textContent = dict.goalUnit(todaySess, state.settings.dailyGoal);
+
+        // 7-Day Bar Chart
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const dateStr = getLocalDateStr(d);
+          const mins = state.logs.filter((l) => l.date === dateStr).reduce((a, b) => a + b.minutes, 0);
+          days.push({
+            dateStr,
+            dayName: dict.daysShort[d.getDay()],
+            mins,
+            isToday: i === 0
+          });
+        }
+
+        const sum7d = days.reduce((a, b) => a + b.mins, 0);
+        document.getElementById("chart-7d-total").textContent = `${sum7d}m`;
+
+        const maxMins = Math.max(60, ...days.map((d) => d.mins));
+        const chartEl = document.getElementById("bar-chart");
+        chartEl.innerHTML = "";
+        days.forEach((day) => {
+          const col = document.createElement("div");
+          col.className = "bar-col" + (day.isToday ? " today" : "");
+          col.title = `${day.dateStr}: ${day.mins} min`;
+
+          const track = document.createElement("div");
+          track.className = "bar-track";
+
+          const fill = document.createElement("div");
+          fill.className = "bar-fill";
+          const pct = Math.round((day.mins / maxMins) * 100);
+          fill.style.height = `${Math.max(4, pct)}%`;
+
+          const lbl = document.createElement("span");
+          lbl.className = "bar-day";
+          lbl.textContent = day.dayName;
+
+          track.appendChild(fill);
+          col.append(track, lbl);
+          chartEl.appendChild(col);
+        });
+
+        // 24-Hour Heatmap
+        const hourTotals = new Array(24).fill(0);
+        state.logs.forEach((l) => {
+          if (typeof l.hour === "number" && l.hour >= 0 && l.hour < 24) {
+            hourTotals[l.hour] += l.minutes || 0;
+          }
+        });
+        const maxHour = Math.max(25, ...hourTotals);
+
+        const heatEl = document.getElementById("heatmap-grid");
+        heatEl.innerHTML = "";
+        for (let h = 0; h < 24; h++) {
+          const cell = document.createElement("div");
+          cell.className = "heat-cell";
+          const m = hourTotals[h];
+          let level = 0;
+          if (m > 0) {
+            const r = m / maxHour;
+            level = r > 0.75 ? 4 : r > 0.45 ? 3 : r > 0.2 ? 2 : 1;
+          }
+          cell.setAttribute("data-level", String(level));
+          cell.textContent = String(h).padStart(2, "0");
+          cell.title = `${String(h).padStart(2, "0")}:00 — ${m} min`;
+          heatEl.appendChild(cell);
+        }
+      }
+
+      /* ========================================================================
+         7. THEME, LANGUAGE, NOTIFICATIONS & DATA EXPORT/IMPORT
+         ======================================================================== */
+      function applyTheme(theme) {
+        state.theme = theme;
+        document.documentElement.setAttribute("data-theme", theme);
+        const metaTheme = document.getElementById("meta-theme-color");
+        if (metaTheme) {
+          metaTheme.content = theme === "amoled" ? "#000000" : theme === "dark" ? "#121214" : "#F6F8FA";
+        }
+        document.querySelectorAll("[data-theme-val]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.themeVal === theme);
+        });
+        saveState();
+      }
+
+      function applyLanguage(lang) {
+        state.lang = lang;
+        document.documentElement.lang = lang;
+        const dict = I18N[lang];
+
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const key = el.dataset.i18n;
+          if (typeof dict[key] === "string") {
+            el.textContent = dict[key];
+          }
+        });
+
+        document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+          const key = el.dataset.i18nTitle;
+          if (typeof dict[key] === "string") {
+            el.title = dict[key];
+          }
+        });
+
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+          const key = el.dataset.i18nPlaceholder;
+          if (typeof dict[key] === "string") {
+            el.placeholder = dict[key];
+          }
+        });
+
+        document.querySelectorAll("[data-lang-val]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.langVal === lang);
+        });
+
+        updateNetworkBadge();
+        renderTasks();
+        renderAnalytics();
+        saveState();
+      }
+
+      function applyMuteState() {
+        document.getElementById("icon-vol-on").style.display = state.muted ? "none" : "block";
+        document.getElementById("icon-vol-off").style.display = state.muted ? "block" : "none";
+        document.getElementById("btn-mute").classList.toggle("active", state.muted);
+        updateAmbientPlayback();
+        saveState();
+      }
+
+      let toastTimer = null;
+      function showToast(msg) {
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.classList.add("show");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove("show"), 2800);
+      }
+
+      function sendSystemNotification(title, body) {
+        if (!state.settings.desktopNotif || !("Notification" in window)) return;
+        if (Notification.permission === "granted") {
+          try {
+            new Notification(title, { body, icon: "./icons/icon-192.png" });
+          } catch {}
+        }
+      }
+
+      function updateNetworkBadge() {
+        const dict = I18N[state.lang];
+        const online = navigator.onLine;
+        document.getElementById("net-dot").style.background = online ? "#34A853" : "#F9AB00";
+        document.getElementById("net-label").textContent = online ? dict.offlineReady : dict.offlineActive;
+      }
+
+      window.addEventListener("online", updateNetworkBadge);
+      window.addEventListener("offline", updateNetworkBadge);
+
+      /* ========================================================================
+         8. EVENT BINDINGS & KEYBOARD SHORTCUTS
+         ======================================================================== */
+      document.getElementById("btn-toggle").addEventListener("click", () => {
+        if (timerState.status === "running") {
+          pauseTimer();
+        } else {
+          startTimer();
+        }
+      });
+
+      document.getElementById("btn-reset").addEventListener("click", resetTimer);
+      document.getElementById("btn-skip").addEventListener("click", skipPhase);
+
+      document.querySelectorAll("[data-mode-btn]").forEach((btn) => {
+        btn.addEventListener("click", () => setMode(btn.dataset.modeBtn, false));
+      });
+
+      document.querySelectorAll("[data-preset]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const [f, s, l] = btn.dataset.preset.split("-").map(Number);
+          state.settings.focusMin = f;
+          state.settings.shortMin = s;
+          state.settings.longMin = l;
+          saveState();
+          resetTimer();
+        });
+      });
+
+      // Theme & Language Buttons
+      document.querySelectorAll("[data-theme-val]").forEach((btn) => {
+        btn.addEventListener("click", () => applyTheme(btn.dataset.themeVal));
+      });
+
+      document.querySelectorAll("[data-lang-val]").forEach((btn) => {
+        btn.addEventListener("click", () => applyLanguage(btn.dataset.langVal));
+      });
+
+      // Mute & Zen Mode
+      document.getElementById("btn-mute").addEventListener("click", () => {
+        state.muted = !state.muted;
+        applyMuteState();
+      });
+
+      document.getElementById("btn-zen").addEventListener("click", () => {
+        const active = document.body.classList.toggle("zen-mode");
+        document.getElementById("btn-zen").classList.toggle("active", active);
+      });
+
+      // Ambient Noise Drawer
+      document.getElementById("btn-ambient-toggle").addEventListener("click", () => {
+        const bar = document.getElementById("ambient-bar");
+        const isOpen = bar.classList.toggle("open");
+        document.getElementById("btn-ambient-toggle").classList.toggle("active", isOpen);
+      });
+
+      document.querySelectorAll("[data-noise]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.ambient.type = btn.dataset.noise;
+          document.querySelectorAll("[data-noise]").forEach((b) => b.classList.toggle("active", b === btn));
+          saveState();
+          if (state.ambient.type !== "none") {
+            sound.syncAmbient(true);
+          } else {
+            sound.syncAmbient(false);
+          }
+        });
+      });
+
+      const ambVolInput = document.getElementById("ambient-vol");
+      ambVolInput.value = String(state.ambient.volume);
+      document.getElementById("ambient-vol-val").textContent = `${state.ambient.volume}%`;
+      ambVolInput.addEventListener("input", () => {
+        state.ambient.volume = Number(ambVolInput.value);
+        document.getElementById("ambient-vol-val").textContent = `${state.ambient.volume}%`;
+        saveState();
+        updateAmbientPlayback();
+      });
+
+      // Task Form & Stepper
+      let newEst = 1;
+      document.getElementById("est-dec").addEventListener("click", () => {
+        newEst = Math.max(1, newEst - 1);
+        document.getElementById("est-val").textContent = String(newEst);
+      });
+      document.getElementById("est-inc").addEventListener("click", () => {
+        newEst = Math.min(12, newEst + 1);
+        document.getElementById("est-val").textContent = String(newEst);
+      });
+
+      document.getElementById("task-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const input = document.getElementById("task-input");
+        const text = input.value.trim();
+        if (!text) return;
+
+        const newTask = {
+          id: "t_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          title: text,
+          est: newEst,
+          actual: 0,
+          completed: false
+        };
+        state.tasks.unshift(newTask);
+        if (!state.selectedTaskId) {
+          state.selectedTaskId = newTask.id;
+        }
+        input.value = "";
+        newEst = 1;
+        document.getElementById("est-val").textContent = "1";
+        saveState();
+        renderTasks();
+      });
+
+      document.getElementById("btn-clear-done").addEventListener("click", () => {
+        state.tasks = state.tasks.filter((t) => !t.completed);
+        saveState();
+        renderTasks();
+      });
+
+      // Settings Modal
+      const settingsModal = document.getElementById("settings-modal");
+      function openSettings() {
+        document.getElementById("set-focus").value = state.settings.focusMin;
+        document.getElementById("set-short").value = state.settings.shortMin;
+        document.getElementById("set-long").value = state.settings.longMin;
+        document.getElementById("set-interval").value = state.settings.longInterval;
+        document.getElementById("set-goal").value = state.settings.dailyGoal;
+        document.getElementById("set-chime").value = state.settings.chime;
+
+        document.getElementById("sw-flowtime").setAttribute("aria-checked", String(state.settings.flowtime));
+        document.getElementById("sw-auto-break").setAttribute("aria-checked", String(state.settings.autoBreak));
+        document.getElementById("sw-auto-focus").setAttribute("aria-checked", String(state.settings.autoFocus));
+        document.getElementById("sw-ambient-focus").setAttribute("aria-checked", String(state.settings.ambientFocusOnly));
+        document.getElementById("sw-notif").setAttribute("aria-checked", String(state.settings.desktopNotif));
+
+        settingsModal.classList.add("open");
+      }
+
+      function closeSettings() {
+        settingsModal.classList.remove("open");
+      }
+
+      document.getElementById("btn-settings").addEventListener("click", openSettings);
+      document.getElementById("btn-close-settings").addEventListener("click", closeSettings);
+      document.getElementById("btn-cancel-settings").addEventListener("click", closeSettings);
+      settingsModal.addEventListener("click", (e) => {
+        if (e.target === settingsModal) closeSettings();
+      });
+
+      document.querySelectorAll(".toggle-switch").forEach((sw) => {
+        sw.addEventListener("click", () => {
+          const next = sw.getAttribute("aria-checked") !== "true";
+          sw.setAttribute("aria-checked", String(next));
+          if (sw.id === "sw-notif" && next && "Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission().then((perm) => {
+              if (perm !== "granted") sw.setAttribute("aria-checked", "false");
+            });
+          }
+        });
+      });
+
+      document.getElementById("btn-test-chime").addEventListener("click", () => {
+        const profile = document.getElementById("set-chime").value;
+        sound.playChime(profile, true);
+      });
+
+      document.getElementById("btn-save-settings").addEventListener("click", () => {
+        const clamp = (v, min, max, fb) => {
+          const n = parseInt(v, 10);
+          return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fb;
+        };
+
+        state.settings.focusMin = clamp(document.getElementById("set-focus").value, 1, 180, 25);
+        state.settings.shortMin = clamp(document.getElementById("set-short").value, 1, 60, 5);
+        state.settings.longMin = clamp(document.getElementById("set-long").value, 1, 90, 15);
+        state.settings.longInterval = clamp(document.getElementById("set-interval").value, 2, 10, 4);
+        state.settings.dailyGoal = clamp(document.getElementById("set-goal").value, 1, 20, 8);
+        state.settings.chime = document.getElementById("set-chime").value;
+
+        state.settings.flowtime = document.getElementById("sw-flowtime").getAttribute("aria-checked") === "true";
+        state.settings.autoBreak = document.getElementById("sw-auto-break").getAttribute("aria-checked") === "true";
+        state.settings.autoFocus = document.getElementById("sw-auto-focus").getAttribute("aria-checked") === "true";
+        state.settings.ambientFocusOnly = document.getElementById("sw-ambient-focus").getAttribute("aria-checked") === "true";
+        state.settings.desktopNotif = document.getElementById("sw-notif").getAttribute("aria-checked") === "true";
+
+        saveState();
+        closeSettings();
+        if (timerState.status === "idle") {
+          resetTimer();
+        } else {
+          renderTimerUI();
+        }
+        renderAnalytics();
+        showToast(I18N[state.lang].toastSaved);
+      });
+
+      // Data Export (JSON & CSV) + Import JSON
+      function triggerDownload(filename, content, mime) {
+        const blob = new Blob([content], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      document.getElementById("btn-export-json").addEventListener("click", () => {
+        const payload = JSON.stringify({ exportedAt: new Date().toISOString(), app: "Pomodrone", state }, null, 2);
+        triggerDownload(`pomodrone-backup-${getLocalDateStr()}.json`, payload, "application/json");
+        showToast(I18N[state.lang].toastBackupOk);
+      });
+
+      document.getElementById("btn-export-csv").addEventListener("click", () => {
+        const taskMap = new Map(state.tasks.map((t) => [t.id, t.title]));
+        const header = "Date,Hour,Minutes,Task,Timestamp\n";
+        const rows = state.logs.map((l) => {
+          const title = (taskMap.get(l.taskId) || "").replace(/"/g, '""');
+          return `${l.date},${String(l.hour).padStart(2, "0")}:00,${l.minutes},"${title}",${new Date(l.ts).toISOString()}`;
+        }).join("\n");
+        triggerDownload(`pomodrone-report-${getLocalDateStr()}.csv`, "\uFEFF" + header + rows, "text/csv;charset=utf-8");
+        showToast(I18N[state.lang].toastCsvOk);
+      });
+
+      const importInput = document.getElementById("import-file-input");
+      document.getElementById("btn-import-json").addEventListener("click", () => importInput.click());
+      importInput.addEventListener("change", (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const parsed = JSON.parse(String(reader.result));
+            const incoming = parsed.state || parsed;
+            if (!incoming || typeof incoming !== "object" || !incoming.settings) {
+              throw new Error("Invalid schema");
+            }
+            state = {
+              ...structuredClone(DEFAULT_STATE),
+              ...incoming,
+              settings: { ...DEFAULT_STATE.settings, ...incoming.settings },
+              ambient: { ...DEFAULT_STATE.ambient, ...(incoming.ambient || {}) },
+              tasks: Array.isArray(incoming.tasks) ? incoming.tasks : [],
+              logs: Array.isArray(incoming.logs) ? incoming.logs : []
+            };
+            saveState();
+            applyTheme(state.theme);
+            applyLanguage(state.lang);
+            applyMuteState();
+            resetTimer();
+            showToast(I18N[state.lang].toastRestoreOk);
+          } catch {
+            showToast(I18N[state.lang].toastRestoreErr);
+          }
+          importInput.value = "";
+        };
+        reader.readAsText(file);
+      });
+
+      // Global Keyboard Shortcuts (Ignored while typing in inputs)
+      document.addEventListener("keydown", (e) => {
+        const tag = document.activeElement?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+        if (e.key === "Escape") {
+          if (settingsModal.classList.contains("open")) {
+            closeSettings();
+          } else if (document.body.classList.contains("zen-mode")) {
+            document.body.classList.remove("zen-mode");
+            document.getElementById("btn-zen").classList.remove("active");
+          }
+          return;
+        }
+
+        if (settingsModal.classList.contains("open")) return;
+
+        if (e.code === "Space") {
+          e.preventDefault();
+          timerState.status === "running" ? pauseTimer() : startTimer();
+        } else if (e.key === "r" || e.key === "R") {
+          resetTimer();
+        } else if (e.key === "s" || e.key === "S") {
+          skipPhase();
+        } else if (e.key === "f" || e.key === "F") {
+          const active = document.body.classList.toggle("zen-mode");
+          document.getElementById("btn-zen").classList.toggle("active", active);
+        } else if (e.key === "m" || e.key === "M") {
+          state.muted = !state.muted;
+          applyMuteState();
+        }
+      });
+
+      /* ========================================================================
+         9. INITIALIZATION & SERVICE WORKER REGISTRATION
+         ======================================================================== */
+      document.querySelectorAll("[data-noise]").forEach((b) => {
+        b.classList.toggle("active", b.dataset.noise === state.ambient.type);
+      });
+
+      applyTheme(state.theme);
+      applyLanguage(state.lang);
+      applyMuteState();
+      resetTimer();
+
+      if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js").catch(() => {});
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
