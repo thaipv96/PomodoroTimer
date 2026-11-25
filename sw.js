@@ -1,4 +1,4 @@
-const CACHE_NAME = "pomodrone-cache-v1.0.0";
+const CACHE_NAME = "pomodrone-cache-v1.1.0";
 const PRECACHE_ASSETS = [
   "./",
   "./index.html",
